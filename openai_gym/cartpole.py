@@ -1,6 +1,8 @@
 import gymnasium as gym
 import numpy as np
 
+from utils import parse_args
+
 class CartPole:
     def __init__(self, num_episodes=100, render_mode=None):
         self.env = gym.make('CartPole-v1', render_mode=render_mode)
@@ -15,11 +17,10 @@ class CartPole:
             self.q_table = np.load('q_table.npy')
         except FileNotFoundError:
             self.q_table = np.zeros((10, 10, 10, 10, 2))
-        self.alpha = 0.1
-        self.gamma = 0.9
-        self.epsilon = 0.1
-        self.best_performance = 0
-        # self.run()
+        self.alpha = 0.1 # learning rate
+        self.gamma = 0.9 # discount factor
+        self.epsilon = 0.1 # exploration rate
+        self.rewards = []
 
     def discretize_state(self, observation):
         cart_position, cart_velocity, pole_angle, pole_velocity = observation
@@ -47,37 +48,28 @@ class CartPole:
 
     def run_episode(self):
         observation, info = self.env.reset()
-        discretized_state = self.discretize_state(observation)
+        state = self.discretize_state(observation)
+        total_reward = 0
         for i in range(self.max_steps):
-            action = self.get_action(discretized_state)
+            action = self.get_action(state)
             observation, reward, terminated, truncated, info = self.env.step(action)
-            prev_state = discretized_state
-            discretized_state = self.discretize_state(observation)
-            self.update_q_table(prev_state, action, reward, discretized_state)
-            if terminated:
+            total_reward += reward
+            state = self.discretize_state(observation)
+            
+            prev_state = state
+            self.update_q_table(prev_state, action, reward, state)
+            if terminated or truncated:
                 observation, info = self.env.reset()
                 break
-            elif truncated:
-                observation, info = self.env.reset()
-                break
-                self.env.close()
-                observation, info = self.env.reset()
-        self.best_performance = max(self.best_performance, i)
-        print(f'Episode {self.episode_number} finished after {i} timesteps')
-        # self.env.close()
+        self.rewards.append(total_reward)
 
 if __name__ == '__main__':
-    render_mode = 'human'
-    # render_mode = None
-    cartpole = CartPole(num_episodes=1000000, render_mode=render_mode)
+    num_episodes, render_mode = parse_args()
+    cartpole = CartPole(num_episodes=num_episodes, render_mode=render_mode)
     try:
         cartpole.run()
         print(cartpole.best_performance)
     except KeyboardInterrupt:
-        # write q-values to file
-        np.save('q_table.npy', cartpole.q_table)
-    except Exception as e:
-        print(cartpole.best_performance)
-        print(cartpole.episode_number)
-        cartpole.env.close()
-        raise e
+        # write q-table to file if user interrupts
+        pass
+    np.save('q_table.npy', cartpole.q_table)
