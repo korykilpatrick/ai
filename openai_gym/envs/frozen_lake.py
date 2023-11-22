@@ -8,7 +8,7 @@ handle map randomization ?
 """
 class FrozenLake:
     def __init__(self, render_mode=None):
-        self.env = gym.make('FrozenLake-v1', render_mode=render_mode)
+        self.env = gym.make('FrozenLake-v1', render_mode=render_mode, is_slippery=False)
         self.is_continuous = False
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
@@ -16,6 +16,8 @@ class FrozenLake:
     
     def modify_reward(self, observation, reward, terminated, truncated):
         """ Default setting is to receive reward = 0 for every step taken, except for the last step where reward = 1 if the goal is reached. I'm not sure why this is - it seems like holes should have a negative reward. It's unclear (without experimentation) what the appropriate values should be for the 3 cases of hole, goal, and not terminated.
+
+        This is definitely incorrect and should be modified.
         """
         if terminated and reward == 1.0:
             # reached the goal
